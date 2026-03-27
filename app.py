@@ -16,18 +16,18 @@ def load_data():
 
 df = load_data()
 
-st.title("🏠 California Housing Price Prediction (Ridge Regression)")
+st.title("🏠 California Housing Price Prediction")
 
 st.write("### Dataset Preview")
 st.dataframe(df.head())
 
 # -----------------------------
-# 2. Data Preprocessing
+# 2. Preprocessing
 # -----------------------------
-# Drop categorical column
-df = df.drop("ocean_proximity", axis=1)
+# One-hot encode oceanProximity
+df = pd.get_dummies(df, columns=["ocean_proximity"], drop_first=True)
 
-# Features and target
+# Features & Target
 X = df.drop("median_house_value", axis=1)
 y = df["median_house_value"]
 
@@ -40,7 +40,7 @@ X_train, X_test, y_train, y_test = train_test_split(
 scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 
-# Train model
+# Train Ridge model
 model = Ridge(alpha=1.0)
 model.fit(X_train_scaled, y_train)
 
@@ -58,20 +58,34 @@ population = st.sidebar.number_input("Population", value=1000)
 households = st.sidebar.number_input("Households", value=300)
 median_income = st.sidebar.number_input("Median Income", value=5.0)
 
+ocean = st.sidebar.selectbox(
+    "Ocean Proximity",
+    ["INLAND", "NEAR BAY", "NEAR OCEAN", "ISLAND"]
+)
+
 # Create input dataframe
-input_data = pd.DataFrame({
-    "longitude": [longitude],
-    "latitude": [latitude],
-    "housing_median_age": [housing_median_age],
-    "total_rooms": [total_rooms],
-    "total_bedrooms": [total_bedrooms],
-    "population": [population],
-    "households": [households],
-    "median_income": [median_income]
-})
+input_dict = {
+    "longitude": longitude,
+    "latitude": latitude,
+    "housing_median_age": housing_median_age,
+    "total_rooms": total_rooms,
+    "total_bedrooms": total_bedrooms,
+    "population": population,
+    "households": households,
+    "median_income": median_income,
+}
+
+# Convert to DataFrame
+input_df = pd.DataFrame([input_dict])
+
+# One-hot encode input
+input_df = pd.get_dummies(input_df)
+
+# Align with training columns
+input_df = input_df.reindex(columns=X.columns, fill_value=0)
 
 # Scale input
-input_scaled = scaler.transform(input_data)
+input_scaled = scaler.transform(input_df)
 
 # -----------------------------
 # 4. Prediction
