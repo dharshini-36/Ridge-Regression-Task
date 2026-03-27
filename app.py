@@ -16,7 +16,7 @@ def load_data():
 
 df = load_data()
 
-st.title("🏠 California Housing Price Prediction")
+st.title("🏠 California Housing Price Prediction (Ridge Regression)")
 
 st.write("### Dataset Preview")
 st.dataframe(df.head())
@@ -24,10 +24,10 @@ st.dataframe(df.head())
 # -----------------------------
 # 2. Preprocessing
 # -----------------------------
-# One-hot encode oceanProximity
+# One-hot encoding for ocean_proximity
 df = pd.get_dummies(df, columns=["ocean_proximity"], drop_first=True)
 
-# Features & Target
+# Features and target
 X = df.drop("median_house_value", axis=1)
 y = df["median_house_value"]
 
@@ -45,52 +45,86 @@ model = Ridge(alpha=1.0)
 model.fit(X_train_scaled, y_train)
 
 # -----------------------------
-# 3. User Input
+# 3. Sidebar Inputs
 # -----------------------------
 st.sidebar.header("Enter House Details")
 
 longitude = st.sidebar.number_input("Longitude", value=-122.23)
 latitude = st.sidebar.number_input("Latitude", value=37.88)
-housing_median_age = st.sidebar.number_input("House Age", value=30)
-total_rooms = st.sidebar.number_input("Total Rooms", value=2000)
-total_bedrooms = st.sidebar.number_input("Total Bedrooms", value=400)
-population = st.sidebar.number_input("Population", value=1000)
-households = st.sidebar.number_input("Households", value=300)
-median_income = st.sidebar.number_input("Median Income", value=5.0)
 
+housing_median_age = st.sidebar.number_input(
+    "House Age", min_value=0, max_value=100, value=30
+)
+
+total_rooms = st.sidebar.number_input(
+    "Total Rooms", min_value=1, max_value=100000, value=2000
+)
+
+total_bedrooms = st.sidebar.number_input(
+    "Total Bedrooms", min_value=1, max_value=10000, value=400
+)
+
+population = st.sidebar.number_input(
+    "Population", min_value=1, max_value=100000, value=1000
+)
+
+households = st.sidebar.number_input(
+    "Households", min_value=1, max_value=10000, value=300
+)
+
+median_income = st.sidebar.number_input(
+    "Median Income", min_value=0.0, max_value=20.0, value=5.0
+)
+
+# Ocean proximity input
 ocean = st.sidebar.selectbox(
     "Ocean Proximity",
     ["INLAND", "NEAR BAY", "NEAR OCEAN", "ISLAND"]
 )
 
-# Create input dataframe
-input_dict = {
-    "longitude": longitude,
-    "latitude": latitude,
-    "housing_median_age": housing_median_age,
-    "total_rooms": total_rooms,
-    "total_bedrooms": total_bedrooms,
-    "population": population,
-    "households": households,
-    "median_income": median_income,
-}
+# -----------------------------
+# 4. Prediction Button
+# -----------------------------
+if st.sidebar.button("Predict Price"):
 
-# Convert to DataFrame
-input_df = pd.DataFrame([input_dict])
+    # Create input dictionary
+    input_dict = {
+        "longitude": longitude,
+        "latitude": latitude,
+        "housing_median_age": housing_median_age,
+        "total_rooms": total_rooms,
+        "total_bedrooms": total_bedrooms,
+        "population": population,
+        "households": households,
+        "median_income": median_income,
+    }
 
-# One-hot encode input
-input_df = pd.get_dummies(input_df)
+    # Convert to DataFrame
+    input_df = pd.DataFrame([input_dict])
 
-# Align with training columns
-input_df = input_df.reindex(columns=X.columns, fill_value=0)
+    # One-hot encode input
+    input_df = pd.get_dummies(input_df)
 
-# Scale input
-input_scaled = scaler.transform(input_df)
+    # Add ocean column manually
+    ocean_col = "ocean_proximity_" + ocean
+    if ocean_col in X.columns:
+        input_df[ocean_col] = 1
+
+    # Align columns with training data
+    input_df = input_df.reindex(columns=X.columns, fill_value=0)
+
+    # Scale input
+    input_scaled = scaler.transform(input_df)
+
+    # Predict
+    prediction = model.predict(input_scaled)
+
+    # Display result
+    st.write("## 💰 Predicted House Price")
+    st.success(f"${prediction[0]:,.2f}")
 
 # -----------------------------
-# 4. Prediction
+# Footer
 # -----------------------------
-prediction = model.predict(input_scaled)
-
-st.write("## 💰 Predicted House Price")
-st.success(f"${prediction[0]:,.2f}")
+st.write("---")
+st.write("Built with ❤️ using Streamlit and Ridge Regression")
